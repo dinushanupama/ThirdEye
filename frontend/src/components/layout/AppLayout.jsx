@@ -1,0 +1,109 @@
+import { useContext } from 'react';
+import AIChatWidget from '../AIChatWidget.jsx';
+import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+import { AuthContext } from '../../context/AuthContext';
+import { 
+  LayoutDashboard, 
+  FileText, 
+  PlusCircle, 
+  FolderOpen, 
+  LogOut,
+  User
+} from 'lucide-react';
+
+const AppLayout = () => {
+  const { user, logout } = useContext(AuthContext);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
+  };
+
+  // Define navigation links based on user role
+  const navLinks = [
+    // Visible to everyone
+    { name: 'My Reports', path: '/my-reports', icon: FileText, roles: ['team_member', 'manager', 'admin'] },
+    { name: 'New Report', path: '/reports/new', icon: PlusCircle, roles: ['team_member', 'manager', 'admin'] },
+    // Visible only to managers/admins
+    { name: 'Team Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['manager', 'admin'] },
+    { name: 'Projects', path: '/projects', icon: FolderOpen, roles: ['manager', 'admin'] },
+  ];
+
+  // Filter links based on the current user's role
+  const filteredLinks = navLinks.filter(link => link.roles.includes(user?.role));
+
+  return (
+    <div className="flex h-screen bg-gray-50">
+      {/* Sidebar */}
+      <aside className="w-64 bg-white border-r border-gray-200 flex flex-col">
+        <div className="h-16 flex items-center px-6 border-b border-gray-200">
+          <h1 className="text-xl font-bold text-blue-600">WeeklyStatus</h1>
+        </div>
+        
+        <nav className="flex-1 overflow-y-auto py-4">
+          <ul className="space-y-1 px-3">
+            {filteredLinks.map((link) => {
+              const isActive = location.pathname === link.path;
+              const Icon = link.icon;
+              return (
+                <li key={link.name}>
+                  <Link
+                    to={link.path}
+                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      isActive 
+                        ? 'bg-blue-50 text-blue-700' 
+                        : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                    }`}
+                  >
+                    <Icon className={`mr-3 h-5 w-5 ${isActive ? 'text-blue-700' : 'text-gray-400'}`} />
+                    {link.name}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </nav>
+      </aside>
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        {/* Top Navbar */}
+        <header className="h-16 bg-white border-b border-gray-200 flex items-center justify-between px-6">
+          <div className="text-sm text-gray-500 font-medium">
+            {/* Can add breadcrumbs or page title here later */}
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 text-sm">
+              <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-700">
+                <User className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="font-medium text-gray-700">{user?.name}</p>
+                <p className="text-xs text-gray-500 capitalize">{user?.role.replace('_', ' ')}</p>
+              </div>
+            </div>
+            <button 
+              onClick={handleLogout}
+              className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+              title="Logout"
+            >
+              <LogOut className="h-5 w-5" />
+            </button>
+          </div>
+        </header>
+
+        {/* Page Content */}
+        <main className="flex-1 overflow-y-auto p-6">
+          <Outlet />
+        </main>
+      </div>
+      {/* Global AI Chat Assistant Widget */}
+      <AIChatWidget />
+    </div>
+  );
+};
+
+export default AppLayout;
