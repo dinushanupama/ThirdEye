@@ -1,12 +1,15 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react'; // Added useContext
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, AlertOctagon, Clock, FileText } from 'lucide-react';
 import api from '../api/axiosConfig';
-import Swal from 'sweetalert2'; // <-- Imported SweetAlert2
+import Swal from 'sweetalert2';
+import { AuthContext } from '../context/AuthContext'; // Imported AuthContext
 
 const ReportDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useContext(AuthContext); // Get the logged-in user
+  
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -31,7 +34,7 @@ const ReportDetailPage = () => {
           text: 'Failed to load report details. You may not have permission to view this.',
           ...getSwalTheme()
         }).then(() => {
-          navigate(-1); // Send them back to where they came from
+          navigate(-1); 
         });
       } finally {
         setLoading(false);
@@ -52,7 +55,7 @@ const ReportDetailPage = () => {
   };
 
   if (loading) return <div className="p-8 text-center text-gray-500 dark:text-slate-400 flex items-center justify-center h-[60vh] animate-pulse">Loading report details...</div>;
-  if (error || !report) return null; // SweetAlert handles the error UI and redirects
+  if (error || !report) return null; 
 
   return (
     <div className="max-w-5xl mx-auto pb-12 transition-all duration-200">
@@ -83,8 +86,8 @@ const ReportDetailPage = () => {
           {report.status}
         </span>
         
-        {/* Manager Review Action Link */}
-        {report.status === 'Submitted' && (
+        {/* FIX: Manager Review Action Link (Only visible to managers/admins) */}
+        {report.status === 'Submitted' && (user?.role === 'manager' || user?.role === 'admin') && (
            <Link 
             to={`/review/${report._id}`} 
             className="flex items-center justify-center w-full sm:w-auto px-5 py-2.5 bg-blue-600 text-white rounded-lg shadow-sm font-medium hover:bg-blue-700 hover:shadow transition-all text-sm"
@@ -115,7 +118,7 @@ const ReportDetailPage = () => {
             </div>
             <div>
               <p className="text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider mb-1">Version</p>
-              <p className="text-base font-medium text-gray-900 dark:text-slate-100">v{report.currentVersion}</p>
+              <p className="text-base font-medium text-gray-900 dark:text-slate-100">v{report.currentVersion || 1}</p>
             </div>
           </div>
           

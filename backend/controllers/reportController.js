@@ -67,35 +67,45 @@ const getReportById = async (req, res) => {
   }
 };
 
-// @desc    Update a report (Draft or Resubmit)
+// @desc    Update a report
 // @route   PUT /api/reports/:id
-// @access  Private (Team Member - Owner only)
+// @access  Private
 const updateReport = async (req, res) => {
   try {
-    const report = await WeeklyReport.findById(req.params.id);
+    // 1. Find the existing report first to check its current state
+    const existingReport = await WeeklyReport.findById(req.params.id);
 
-    if (!report) {
+    if (!existingReport) {
       return res.status(404).json({ message: 'Report not found' });
     }
 
-    if (report.user.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: 'Not authorized to edit this report' });
+    // Ensure the user owns the report (optional but recommended for security)
+    if (existingReport.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to update this report' });
     }
 
-    // Enforce workflow: Cannot edit Approved or Submitted reports
-    if (report.status === 'Approved' || report.status === 'Submitted') {
-      return res.status(400).json({ message: `Cannot edit a report in ${report.status} status` });
+    // 2. Version Increment Logic
+    let newVersion = existingReport.currentVersion || 1;
+    
+    // If it was returned for corrections, and the user is submitting it again, bump the version
+    if (existingReport.status === 'Needs Correction' && req.body.status === 'Submitted') {
+      newVersion += 1;
     }
 
+    // 3. Update the report with the new data and the calculated version
     const updatedReport = await WeeklyReport.findByIdAndUpdate(
       req.params.id,
-      req.body,
-      { new: true }
+      { 
+        ...req.body, 
+        currentVersion: newVersion 
+      },
+      { new: true, runValidators: true }
     );
 
-    res.json(updatedReport);
+    res.status(200).json(updatedReport);
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    console.error('Update Report Error:', error);
+    res.status(500).json({ message: 'Failed to update report' });
   }
 };
 

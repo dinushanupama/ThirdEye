@@ -28,6 +28,7 @@ const weeklyReportSchema = new mongoose.Schema({
     enum: ['Draft', 'Submitted', 'Needs Correction', 'Approved'],
     default: 'Draft'
   }, //[cite: 1]
+  currentVersion: { type: Number, default: 1 },
   tasks: [taskSchema], //[cite: 1]
   plannedNextWeek: { type: String, default: '' }, //[cite: 1]
   blockers: [{

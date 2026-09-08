@@ -115,8 +115,8 @@ const ReportHistoryPage = () => {
                           {report.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
-                        v{report.currentVersion}
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400 font-medium">
+                        v{report.currentVersion || 1}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         {(report.status === 'Draft' || report.status === 'Needs Correction') ? (
