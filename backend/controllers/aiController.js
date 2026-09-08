@@ -1,3 +1,8 @@
+const { GoogleGenerativeAI } = require('@google/generative-ai');
+
+// Initialize the API client using your secret key
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
 // @desc    Generate AI response for chat assistant
 // @route   POST /api/ai/chat
 // @access  Private
@@ -9,30 +14,28 @@ const generateResponse = async (req, res) => {
       return res.status(400).json({ message: 'Message is required' });
     }
 
-    // --- simulated AI Logic ---
-    // (To upgrade this later, you would install the '@google/generative-ai' or 'openai' package
-    // and pass the `message` variable to their API here).
-    
-    let aiResponse = "I'm your AI reporting assistant. How can I help you today?";
-    const lowerMessage = message.toLowerCase();
+    // We use gemini-3.6-flash because it is extremely fast for chat applications
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
 
-    if (lowerMessage.includes('blocker') || lowerMessage.includes('stuck')) {
-      aiResponse = "If you are facing a blocker, make sure to add it to the 'Blockers & Challenges' section of your report and check the 'Key Issue' box so your manager sees it immediately.";
-    } else if (lowerMessage.includes('hours') || lowerMessage.includes('time')) {
-      aiResponse = "Remember to accurately split your planned hours vs. actual spent hours for each task. This helps managers balance team workloads.";
-    } else if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
-      aiResponse = "Hello! Do you need help formatting your weekly report?";
-    } else {
-      aiResponse = `I received your message about: "${message}". As a demo AI, I recommend reviewing the project guidelines for specific formatting questions!`;
-    }
+    // Give the AI some context about what its job is before passing the user's message
+    const prompt = `
+      You are a helpful AI assistant integrated into a team reporting application called WeeklyStatus. 
+      Your job is to help software engineers write better weekly status reports, format their tasks, and resolve blockers.
+      Keep your answers concise, professional, and friendly (maximum 3 short paragraphs).
+      
+      User's message: "${message}"
+    `;
 
-    // Simulate network delay to make it feel like a real AI generating text
-    setTimeout(() => {
-      res.json({ response: aiResponse });
-    }, 1000);
+    // Call the API
+    const result = await model.generateContent(prompt);
+    const aiResponse = result.response.text();
+
+    // Send the real AI text back to the frontend widget
+    res.json({ response: aiResponse });
 
   } catch (error) {
-    res.status(500).json({ message: 'AI processing failed' });
+    console.error('AI Generation Error:', error);
+    res.status(500).json({ message: 'The AI is currently unavailable. Please try again later.' });
   }
 };
 
