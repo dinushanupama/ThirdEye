@@ -1,43 +1,51 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Users } from 'lucide-react';
 import api from '../api/axiosConfig';
 
 const ProjectManagementPage = () => {
   const [projects, setProjects] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]); // State for available users
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   
-  // Form State
+  // Form State updated with assignedUsers array
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [formData, setFormData] = useState({ name: '', description: '' });
+  const [formData, setFormData] = useState({ name: '', description: '', assignedUsers: [] });
   const [formError, setFormError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Fetch Projects
-  const fetchProjects = async () => {
+  // Fetch Projects and Team Members
+  const fetchData = async () => {
     try {
-      const res = await api.get('/projects');
-      setProjects(res.data);
+      const [projectsRes, usersRes] = await Promise.all([
+        api.get('/projects'),
+        api.get('/projects/users') // New endpoint
+      ]);
+      setProjects(projectsRes.data);
+      setTeamMembers(usersRes.data);
     } catch (err) {
-      setError('Failed to load projects.');
+      setError('Failed to load project data.');
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchProjects();
+    fetchData();
   }, []);
 
-  // Open form for Create or Edit
   const openForm = (project = null) => {
     if (project) {
       setEditingId(project._id);
-      setFormData({ name: project.name, description: project.description });
+      setFormData({ 
+        name: project.name, 
+        description: project.description,
+        assignedUsers: project.assignedUsers.map(u => u._id) // Extract IDs for the checkboxes
+      });
     } else {
       setEditingId(null);
-      setFormData({ name: '', description: '' });
+      setFormData({ name: '', description: '', assignedUsers: [] });
     }
     setFormError('');
     setIsFormOpen(true);
@@ -46,10 +54,22 @@ const ProjectManagementPage = () => {
   const closeForm = () => {
     setIsFormOpen(false);
     setEditingId(null);
-    setFormData({ name: '', description: '' });
+    setFormData({ name: '', description: '', assignedUsers: [] });
   };
 
-  // Handle Submit (Create & Update)
+  // Toggle user assignment in the checkbox list
+  const handleUserToggle = (userId) => {
+    setFormData(prev => {
+      const isSelected = prev.assignedUsers.includes(userId);
+      return {
+        ...prev,
+        assignedUsers: isSelected 
+          ? prev.assignedUsers.filter(id => id !== userId) // Remove if already selected
+          : [...prev.assignedUsers, userId] // Add if not selected
+      };
+    });
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -61,7 +81,7 @@ const ProjectManagementPage = () => {
       } else {
         await api.post('/projects', formData);
       }
-      await fetchProjects();
+      await fetchData(); // Refresh table
       closeForm();
     } catch (err) {
       setFormError(err.response?.data?.message || 'Failed to save project.');
@@ -70,10 +90,8 @@ const ProjectManagementPage = () => {
     }
   };
 
-  // Handle Delete
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to delete this project?')) return;
-    
     try {
       await api.delete(`/projects/${id}`);
       setProjects(projects.filter(p => p._id !== id));
@@ -89,14 +107,10 @@ const ProjectManagementPage = () => {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Project Management</h1>
-          <p className="text-sm text-gray-500 mt-1">Add, edit, or remove projects available for weekly reports.</p>
+          <p className="text-sm text-gray-500 mt-1">Manage projects and assign team members.</p>
         </div>
-        <button 
-          onClick={() => openForm()}
-          className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm font-medium"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Add Project
+        <button onClick={() => openForm()} className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors text-sm font-medium">
+          <Plus className="w-4 h-4 mr-2" /> Add Project
         </button>
       </div>
 
@@ -109,37 +123,36 @@ const ProjectManagementPage = () => {
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project Name</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned Team</th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {projects.map((project) => (
               <tr key={project._id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {project.name}
-                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{project.name}</td>
+                <td className="px-6 py-4 text-sm text-gray-500">{project.description || '-'}</td>
                 <td className="px-6 py-4 text-sm text-gray-500">
-                  {project.description || '-'}
+                  {project.assignedUsers && project.assignedUsers.length > 0 ? (
+                    <div className="flex flex-wrap gap-1">
+                      {project.assignedUsers.map(user => (
+                        <span key={user._id} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                          {user.name}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <span className="text-gray-400 italic">No one assigned</span>
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                   <div className="flex justify-end space-x-3">
-                    <button onClick={() => openForm(project)} className="text-blue-600 hover:text-blue-900">
-                      <Edit2 className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => handleDelete(project._id)} className="text-red-600 hover:text-red-900">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <button onClick={() => openForm(project)} className="text-blue-600 hover:text-blue-900"><Edit2 className="w-4 h-4" /></button>
+                    <button onClick={() => handleDelete(project._id)} className="text-red-600 hover:text-red-900"><Trash2 className="w-4 h-4" /></button>
                   </div>
                 </td>
               </tr>
             ))}
-            {projects.length === 0 && (
-              <tr>
-                <td colSpan="3" className="px-6 py-8 text-center text-sm text-gray-500">
-                  No projects created yet.
-                </td>
-              </tr>
-            )}
           </tbody>
         </table>
       </div>
@@ -147,53 +160,50 @@ const ProjectManagementPage = () => {
       {/* Create / Edit Form Overlay */}
       {isFormOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 relative">
-            <button 
-              onClick={closeForm}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-            >
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md p-6 relative max-h-[90vh] overflow-y-auto">
+            <button onClick={closeForm} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
               <X className="w-5 h-5" />
             </button>
             
-            <h2 className="text-xl font-bold mb-4">
-              {editingId ? 'Edit Project' : 'Create New Project'}
-            </h2>
-            
+            <h2 className="text-xl font-bold mb-4">{editingId ? 'Edit Project' : 'Create New Project'}</h2>
             {formError && <div className="mb-4 text-sm text-red-500 bg-red-50 p-2 rounded">{formError}</div>}
             
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
-                <input 
-                  type="text" 
-                  required
-                  className="w-full border-gray-300 rounded-md p-2 border focus:ring-blue-500 focus:border-blue-500"
-                  value={formData.name}
-                  onChange={(e) => setFormData({...formData, name: e.target.value})}
-                />
+                <input type="text" required className="w-full border-gray-300 rounded-md p-2 border focus:ring-blue-500 focus:border-blue-500"
+                  value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description (Optional)</label>
-                <textarea 
-                  rows={3}
-                  className="w-full border-gray-300 rounded-md p-2 border focus:ring-blue-500 focus:border-blue-500"
-                  value={formData.description}
-                  onChange={(e) => setFormData({...formData, description: e.target.value})}
-                />
+                <textarea rows={2} className="w-full border-gray-300 rounded-md p-2 border focus:ring-blue-500 focus:border-blue-500"
+                  value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} />
               </div>
+              
+              {/* NEW: Team Member Assignment Section */}
+              <div className="border-t pt-4 mt-4">
+                <label className="block text-sm font-medium text-gray-900 mb-2 flex items-center">
+                  <Users className="w-4 h-4 mr-2" /> Assign Team Members
+                </label>
+                <div className="max-h-40 overflow-y-auto border border-gray-200 rounded-md p-2 space-y-2 bg-gray-50">
+                  {teamMembers.map(user => (
+                    <label key={user._id} className="flex items-center space-x-3 p-1 hover:bg-gray-100 rounded cursor-pointer">
+                      <input 
+                        type="checkbox" 
+                        className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                        checked={formData.assignedUsers.includes(user._id)}
+                        onChange={() => handleUserToggle(user._id)}
+                      />
+                      <span className="text-sm text-gray-700">{user.name}</span>
+                    </label>
+                  ))}
+                  {teamMembers.length === 0 && <p className="text-sm text-gray-500 italic p-2">No team members found.</p>}
+                </div>
+              </div>
+
               <div className="flex justify-end space-x-3 pt-4">
-                <button 
-                  type="button" 
-                  onClick={closeForm}
-                  className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit" 
-                  disabled={isSubmitting}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50"
-                >
+                <button type="button" onClick={closeForm} className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
                   {isSubmitting ? 'Saving...' : 'Save Project'}
                 </button>
               </div>

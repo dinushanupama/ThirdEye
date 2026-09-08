@@ -4,14 +4,18 @@ const {
   createProject,
   getProjects,
   updateProject,
-  deleteProject
+  deleteProject,
+  getTeamMembers // <-- Import the new function
 } = require('../controllers/projectController');
 const { protect, authorize } = require('../middleware/authMiddleware');
 
-// All authenticated users can view projects
 router.route('/')
   .get(protect, getProjects)
   .post(protect, authorize('manager', 'admin'), createProject);
+
+// NEW ROUTE: Must be above /:id
+router.route('/users')
+  .get(protect, authorize('manager', 'admin'), getTeamMembers);
 
 router.route('/:id')
   .put(protect, authorize('manager', 'admin'), updateProject)

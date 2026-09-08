@@ -1,4 +1,5 @@
 const Project = require('../models/Project');
+const User = require('../models/User');
 
 // @desc    Create a new project/category
 // @route   POST /api/projects
@@ -24,16 +25,30 @@ const createProject = async (req, res) => {
   }
 };
 
-// @desc    Get all projects
+// @desc    Get all projects (Managers see all, Team Members see their assigned ones)
 // @route   GET /api/projects
-// @access  Private (All authenticated users)
+// @access  Private
 const getProjects = async (req, res) => {
   try {
-    // Only fetch active projects for team members, managers see all
-    const filter = req.user.role === 'team_member' ? { status: 'active' } : {};
+    // If the user is a team member, ONLY fetch projects where their ID is in the assignedUsers array
+    const filter = req.user.role === 'team_member' 
+      ? { status: 'active', assignedUsers: req.user._id } 
+      : {};
     
     const projects = await Project.find(filter).populate('assignedUsers', 'name email');
     res.json(projects);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get all team members (for the project assignment dropdown)
+// @route   GET /api/projects/users
+// @access  Private (Manager/Admin)
+const getTeamMembers = async (req, res) => {
+  try {
+    const users = await User.find({ role: 'team_member' }).select('name email');
+    res.json(users);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -82,5 +97,6 @@ module.exports = {
   createProject,
   getProjects,
   updateProject,
-  deleteProject
+  deleteProject,
+  getTeamMembers
 };
