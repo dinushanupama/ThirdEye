@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Plus, Edit2, Trash2, X, Users } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, Users, ChevronLeft, ChevronRight } from 'lucide-react';
 import api from '../api/axiosConfig';
 
 const ProjectManagementPage = () => {
@@ -7,6 +7,10 @@ const ProjectManagementPage = () => {
   const [teamMembers, setTeamMembers] = useState([]); // State for available users
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  
+  // --- Pagination State ---
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
   
   // Form State updated with assignedUsers array
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -95,12 +99,25 @@ const ProjectManagementPage = () => {
     try {
       await api.delete(`/projects/${id}`);
       setProjects(projects.filter(p => p._id !== id));
+      
+      // Prevent being stuck on an empty page if we delete the last item on it
+      const newTotalPages = Math.ceil((projects.length - 1) / itemsPerPage);
+      if (currentPage > newTotalPages && newTotalPages > 0) {
+        setCurrentPage(newTotalPages);
+      }
     } catch (err) {
       alert(err.response?.data?.message || 'Failed to delete project.');
     }
   };
 
   if (loading) return <div className="p-8 text-center text-gray-500">Loading projects...</div>;
+
+  // --- Client-Side Pagination Logic ---
+  const totalPages = Math.ceil(projects.length / itemsPerPage);
+  const paginatedProjects = projects.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="max-w-6xl mx-auto pb-12 relative">
@@ -128,7 +145,8 @@ const ProjectManagementPage = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {projects.map((project) => (
+            {/* Map over paginatedProjects instead of projects */}
+            {paginatedProjects.map((project) => (
               <tr key={project._id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{project.name}</td>
                 <td className="px-6 py-4 text-sm text-gray-500">{project.description || '-'}</td>
@@ -155,6 +173,31 @@ const ProjectManagementPage = () => {
             ))}
           </tbody>
         </table>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="px-6 py-3 border-t border-gray-200 bg-white flex items-center justify-between">
+            <span className="text-sm text-gray-700">
+              Showing <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> to <span className="font-medium">{Math.min(currentPage * itemsPerPage, projects.length)}</span> of <span className="font-medium">{projects.length}</span> results
+            </span>
+            <div className="flex space-x-2">
+              <button 
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="px-3 py-1 border border-gray-300 rounded-md flex items-center disabled:opacity-50 hover:bg-gray-50 text-sm"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" /> Prev
+              </button>
+              <button 
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="px-3 py-1 border border-gray-300 rounded-md flex items-center disabled:opacity-50 hover:bg-gray-50 text-sm"
+              >
+                Next <ChevronRight className="w-4 h-4 ml-1" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Create / Edit Form Overlay */}
