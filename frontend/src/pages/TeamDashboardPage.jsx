@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { Users, AlertCircle, CheckCircle, FileText, Filter, FolderOpen, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Users, AlertCircle, CheckCircle, FileText, Filter, FolderOpen, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
 import api from '../api/axiosConfig';
-import Swal from 'sweetalert2'; // <-- Imported SweetAlert2
+import Swal from 'sweetalert2';
 
 const TeamDashboardPage = () => {
   const [reports, setReports] = useState([]);
@@ -15,6 +15,8 @@ const TeamDashboardPage = () => {
   const [statusFilter, setStatusFilter] = useState('All');
   const [memberFilter, setMemberFilter] = useState('All');
   const [projectFilter, setProjectFilter] = useState('All');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -31,7 +33,6 @@ const TeamDashboardPage = () => {
         setProjectCount(projectsRes.data.length);
       } catch (err) {
         setError(true);
-        // Premium SweetAlert Popup for errors
         Swal.fire({
           icon: 'error',
           title: 'Connection Failed',
@@ -50,7 +51,7 @@ const TeamDashboardPage = () => {
   // --- Reset Pagination when filters change ---
   useEffect(() => {
     setCurrentPage(1);
-  }, [statusFilter, memberFilter, projectFilter]);
+  }, [statusFilter, memberFilter, projectFilter, startDate, endDate]);
 
   if (loading) return <div className="p-8 text-center text-gray-500 dark:text-slate-400 flex items-center justify-center h-[60vh] animate-pulse">Loading dashboard metrics...</div>;
   if (error) return <div className="p-8 text-center text-red-500">Dashboard is currently unavailable.</div>;
@@ -70,7 +71,17 @@ const TeamDashboardPage = () => {
     const matchStatus = statusFilter === 'All' || report.status === statusFilter;
     const matchMember = memberFilter === 'All' || report.user?.name === memberFilter;
     const matchProject = projectFilter === 'All' || report.project?.name === projectFilter;
-    return matchStatus && matchMember && matchProject;
+    
+    // Date Filtering Logic
+    let matchDate = true;
+    if (startDate) {
+      matchDate = matchDate && new Date(report.weekStartDate) >= new Date(startDate);
+    }
+    if (endDate) {
+      matchDate = matchDate && new Date(report.weekEndDate) <= new Date(endDate);
+    }
+
+    return matchStatus && matchMember && matchProject && matchDate;
   });
 
   // --- Apply Client-Side Pagination ---
@@ -95,7 +106,6 @@ const TeamDashboardPage = () => {
     { name: 'Docs', hours: reports.reduce((sum, r) => sum + (r.hoursBreakdown?.documentation || 0), 0) }
   ];
 
-  // A sleek dark tooltip styling that looks premium in both themes
   const customTooltipStyle = {
     backgroundColor: 'rgba(15, 23, 42, 0.95)',
     borderColor: '#334155',
@@ -104,6 +114,8 @@ const TeamDashboardPage = () => {
     boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
   };
 
+  const inputBaseClasses = "text-sm bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-200 border border-gray-200 dark:border-slate-700 rounded-lg p-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm outline-none";
+
   return (
     <div className="max-w-7xl mx-auto space-y-8 pb-12 transition-all duration-200">
       <div>
@@ -111,7 +123,7 @@ const TeamDashboardPage = () => {
         <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Overview of team activity, workloads, and blockers.</p>
       </div>
 
-      {/* Summary Metrics (Shadcn Card Style) */}
+      {/* Summary Metrics */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {[
           { title: 'Reports', value: totalReports, icon: FileText, color: 'blue' },
@@ -169,26 +181,58 @@ const TeamDashboardPage = () => {
       <div className="bg-white dark:bg-slate-900 shadow-sm rounded-xl border border-gray-200 dark:border-slate-800 overflow-hidden transition-colors duration-200">
         
         {/* Table Toolbar */}
-        <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-800 flex flex-col md:flex-row justify-between items-start md:items-center bg-gray-50/50 dark:bg-slate-900/50 space-y-4 md:space-y-0">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-slate-800 flex flex-col xl:flex-row justify-between items-start xl:items-center bg-gray-50/50 dark:bg-slate-900/50 space-y-4 xl:space-y-0">
           <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center">
             <Filter className="w-4 h-4 mr-2 text-gray-400" /> Filter Reports
           </h3>
-          <div className="flex flex-wrap gap-3">
-            {[
-              { state: memberFilter, setter: setMemberFilter, defaultOption: 'All Members', options: uniqueMembers },
-              { state: projectFilter, setter: setProjectFilter, defaultOption: 'All Projects', options: uniqueProjects },
-              { state: statusFilter, setter: setStatusFilter, defaultOption: 'All Statuses', options: ['Submitted', 'Needs Correction', 'Approved'] }
-            ].map((filter, i) => (
-              <select 
-                key={i}
-                className="text-sm bg-white dark:bg-slate-950 text-gray-900 dark:text-slate-200 border border-gray-200 dark:border-slate-700 rounded-lg p-2 pr-8 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors shadow-sm outline-none" 
-                value={filter.state} 
-                onChange={(e) => filter.setter(e.target.value)}
-              >
-                <option value="All">{filter.defaultOption}</option>
-                {filter.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
-              </select>
-            ))}
+          
+          <div className="flex flex-col md:flex-row flex-wrap gap-4 w-full xl:w-auto">
+            {/* Date Range Filters */}
+            <div className="flex items-center space-x-2 bg-white dark:bg-slate-950 border border-gray-200 dark:border-slate-700 rounded-lg p-1 shadow-sm">
+              <Calendar className="w-4 h-4 text-gray-400 ml-2" />
+              <input 
+                type="date" 
+                className="text-sm bg-transparent border-none text-gray-900 dark:text-slate-200 focus:ring-0 dark:[color-scheme:dark] p-1.5 outline-none" 
+                value={startDate} 
+                onChange={(e) => setStartDate(e.target.value)}
+                title="Start Date"
+              />
+              <span className="text-gray-400 dark:text-slate-500 text-sm">to</span>
+              <input 
+                type="date" 
+                className="text-sm bg-transparent border-none text-gray-900 dark:text-slate-200 focus:ring-0 dark:[color-scheme:dark] p-1.5 outline-none" 
+                value={endDate} 
+                onChange={(e) => setEndDate(e.target.value)}
+                title="End Date"
+              />
+              {(startDate || endDate) && (
+                <button 
+                  onClick={() => { setStartDate(''); setEndDate(''); }}
+                  className="text-xs text-blue-600 dark:text-blue-400 hover:underline px-2 font-medium"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+
+            {/* Dropdown Filters */}
+            <div className="flex flex-wrap gap-3">
+              {[
+                { state: memberFilter, setter: setMemberFilter, defaultOption: 'All Members', options: uniqueMembers },
+                { state: projectFilter, setter: setProjectFilter, defaultOption: 'All Projects', options: uniqueProjects },
+                { state: statusFilter, setter: setStatusFilter, defaultOption: 'All Statuses', options: ['Submitted', 'Needs Correction', 'Approved'] }
+              ].map((filter, i) => (
+                <select 
+                  key={i}
+                  className={`${inputBaseClasses} pr-8`}
+                  value={filter.state} 
+                  onChange={(e) => filter.setter(e.target.value)}
+                >
+                  <option value="All">{filter.defaultOption}</option>
+                  {filter.options.map(opt => <option key={opt} value={opt}>{opt}</option>)}
+                </select>
+              ))}
+            </div>
           </div>
         </div>
         
@@ -199,6 +243,7 @@ const TeamDashboardPage = () => {
               <tr>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Team Member</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Project</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Week Of</th>
                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-slate-400 uppercase tracking-wider">Action</th>
               </tr>
@@ -208,8 +253,10 @@ const TeamDashboardPage = () => {
                 <tr key={report._id} className="hover:bg-gray-50 dark:hover:bg-slate-800/50 transition-colors group">
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-slate-200">{report.user?.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">{report.project?.name || '-'}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-slate-400">
+                    {new Date(report.weekStartDate).toLocaleDateString()} - {new Date(report.weekEndDate).toLocaleDateString()}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    {/* Shadcn style translucent badges */}
                     <span 
                       className="px-2.5 py-1 text-xs font-semibold rounded-full border transition-colors" 
                       style={{ 
@@ -231,7 +278,7 @@ const TeamDashboardPage = () => {
                 </tr>
               ))}
               {paginatedReports.length === 0 && (
-                <tr><td colSpan="4" className="px-6 py-12 text-center text-sm text-gray-500 dark:text-slate-400 italic">No reports found matching these filters.</td></tr>
+                <tr><td colSpan="5" className="px-6 py-12 text-center text-sm text-gray-500 dark:text-slate-400 italic">No reports found matching these filters.</td></tr>
               )}
             </tbody>
           </table>

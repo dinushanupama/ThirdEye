@@ -8,12 +8,7 @@ import ReportDetailPage from './pages/ReportDetailPage';
 import TeamDashboardPage from './pages/TeamDashboardPage';
 import ManagerReviewPage from './pages/ManagerReviewPage';
 import ProjectManagementPage from './pages/ProjectManagementPage';
-
-// Temporary placeholders for testing
-const DashboardPlaceholder = () => <div className="bg-white p-6 rounded-lg shadow-sm">Manager Dashboard View</div>;
-const NewReportPlaceholder = () => <div className="bg-white p-6 rounded-lg shadow-sm">Create New Report Form</div>;
-const ProjectsPlaceholder = () => <div className="bg-white p-6 rounded-lg shadow-sm">Project Management View</div>;
-
+import TeamInsightsView from './components/TeamInsightsView'; // <-- Imported the new insights view
 
 function App() {
   return (
@@ -35,6 +30,7 @@ function App() {
             <Route element={<ProtectedRoute allowedRoles={['manager', 'admin']} />}>
               <Route path="/dashboard" element={<TeamDashboardPage />} />
               <Route path="/projects" element={<ProjectManagementPage />} />
+              <Route path="/insights" element={<TeamInsightsView />} /> {/* <-- Added the new route here */}
               <Route path="/review/:id" element={<ManagerReviewPage />} />
             </Route>
 

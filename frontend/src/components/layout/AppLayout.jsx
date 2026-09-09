@@ -9,7 +9,8 @@ import {
   PlusCircle, 
   FolderOpen, 
   LogOut,
-  User
+  User,
+  LineChart // <-- Added new icon for Insights
 } from 'lucide-react';
 
 const AppLayout = () => {
@@ -30,6 +31,7 @@ const AppLayout = () => {
     
     // Visible ONLY to managers/admins
     { name: 'Team Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['manager', 'admin'] },
+    { name: 'Team Insights', path: '/insights', icon: LineChart, roles: ['manager', 'admin'] }, // <-- Added Insights Route
     { name: 'Projects', path: '/projects', icon: FolderOpen, roles: ['manager', 'admin'] },
   ];
 
