@@ -1,6 +1,6 @@
-WeeklyStatus - Enterprise Reporting System
+ThirdEye - Enterprise Reporting System
 
-WeeklyStatus is a secure, role-based MERN stack application designed to streamline team reporting, project tracking, and managerial oversight. It features an integrated Retrieval-Augmented Generation (RAG) AI assistant to provide dynamic team insights.
+ThirdEye is a secure, role-based MERN stack application designed to streamline team reporting, project tracking, and managerial oversight. It features an integrated Retrieval-Augmented Generation (RAG) AI assistant to provide dynamic team insights.
 
 📋 Prerequisites
 Before you begin, ensure you have the following installed on your machine:
