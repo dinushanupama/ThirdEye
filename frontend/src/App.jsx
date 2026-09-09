@@ -8,7 +8,8 @@ import ReportDetailPage from './pages/ReportDetailPage';
 import TeamDashboardPage from './pages/TeamDashboardPage';
 import ManagerReviewPage from './pages/ManagerReviewPage';
 import ProjectManagementPage from './pages/ProjectManagementPage';
-import TeamInsightsView from './components/TeamInsightsView'; // <-- Imported the new insights view
+import TeamInsightsView from './components/TeamInsightsView'; 
+import UserManagementPage from './pages/UserManagementPage';
 
 function App() {
   return (
@@ -32,6 +33,10 @@ function App() {
               <Route path="/projects" element={<ProjectManagementPage />} />
               <Route path="/insights" element={<TeamInsightsView />} /> {/* <-- Added the new route here */}
               <Route path="/review/:id" element={<ManagerReviewPage />} />
+            </Route>
+
+            <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+              <Route path="/users" element={<UserManagementPage />} />
             </Route>
 
           </Route>

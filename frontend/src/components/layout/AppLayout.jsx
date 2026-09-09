@@ -10,6 +10,7 @@ import {
   FolderOpen, 
   LogOut,
   User,
+  Users,
   LineChart // <-- Added new icon for Insights
 } from 'lucide-react';
 
@@ -33,6 +34,7 @@ const AppLayout = () => {
     { name: 'Team Dashboard', path: '/dashboard', icon: LayoutDashboard, roles: ['manager', 'admin'] },
     { name: 'Team Insights', path: '/insights', icon: LineChart, roles: ['manager', 'admin'] }, // <-- Added Insights Route
     { name: 'Projects', path: '/projects', icon: FolderOpen, roles: ['manager', 'admin'] },
+    { name: 'User Management', path: '/users', icon: Users, roles: ['admin'] },
   ];
 
   // Filter links based on the current user's role
