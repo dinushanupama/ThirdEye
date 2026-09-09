@@ -1,41 +1,61 @@
 const { GoogleGenerativeAI } = require('@google/generative-ai');
+const WeeklyReport = require('../models/WeeklyReport');
 
-// Initialize the API client using your secret key
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// @desc    Generate AI response for chat assistant
+// @desc    Generate AI chat response
 // @route   POST /api/ai/chat
 // @access  Private
 const generateResponse = async (req, res) => {
   try {
-    const { message } = req.body;
+    const { prompt } = req.body;
+    const userRole = req.user.role; // Passed from your authMiddleware
 
-    if (!message) {
-      return res.status(400).json({ message: 'Message is required' });
+    let systemContext = "You are a helpful AI assistant for the WeeklyStatus app.";
+
+    // 1. Inject Database Context for Managers/Admins
+    if (userRole === 'manager' || userRole === 'admin') {
+      // Fetch reports from the last 14 days
+      const twoWeeksAgo = new Date();
+      twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14);
+
+      const recentReports = await WeeklyReport.find({ weekStartDate: { $gte: twoWeeksAgo } })
+        .populate('user', 'name')
+        .populate('project', 'name');
+
+      // Minimize data payload to save API tokens
+      const compactData = recentReports.map(r => ({
+        member: r.user?.name,
+        project: r.project?.name,
+        status: r.status,
+        tasks: r.tasks.map(t => `${t.taskName} (${t.status}, ${t.spentHours}hrs)`),
+        blockers: r.blockers.map(b => b.description),
+        achievements: r.achievements.map(a => a.description)
+      }));
+
+      systemContext = `
+        You are an analytical AI assistant for managers using the WeeklyStatus app. 
+        Here is the JSON data of the team's activity over the last 2 weeks:
+        ${JSON.stringify(compactData)}
+        
+        Analyze this data to answer the manager's question accurately. 
+        Highlight completed work, identify recurring blockers, and note workload imbalances if asked.
+        Be concise, professional, and format your response clearly.
+      `;
     }
 
-    // We use gemini-3.6-flash because it is extremely fast for chat applications
+    // 2. Initialize Gemini API
+    const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
     const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
 
-    // Give the AI some context about what its job is before passing the user's message
-    const prompt = `
-      You are a helpful AI assistant integrated into a team reporting application called WeeklyStatus. 
-      Your job is to help software engineers write better weekly status reports, format their tasks, and resolve blockers.
-      Keep your answers concise, professional, and friendly (maximum 3 short paragraphs).
-      
-      User's message: "${message}"
-    `;
+    // 3. Combine Context and User Prompt
+    const finalPrompt = `${systemContext}\n\nManager's Query: "${prompt}"`;
+    
+    const result = await model.generateContent(finalPrompt);
+    const responseText = result.response.text();
 
-    // Call the API
-    const result = await model.generateContent(prompt);
-    const aiResponse = result.response.text();
-
-    // Send the real AI text back to the frontend widget
-    res.json({ response: aiResponse });
-
+    res.status(200).json({ reply: responseText });
   } catch (error) {
     console.error('AI Generation Error:', error);
-    res.status(500).json({ message: 'The AI is currently unavailable. Please try again later.' });
+    res.status(500).json({ message: 'Failed to generate AI response' });
   }
 };
 
