@@ -18,9 +18,9 @@ Create a .env file in the backend directory and add the following keys:
 Code snippet
 
 PORT=5000
-MONGO_URI=mongodb+srv://dinushanupama_db_user:dVenkv0m7LdemmmG@cluster0.w6wozv6.mongodb.net/?appName=Cluster0
+MONGO_URI=paste_the_mongo_uri
 JWT_SECRET=your_super_secret_key_here
-GEMINI_API_KEY=AQ.Ab8RN6LiiE0awYw53gs4Z0XRMKEy5Rv9mNuJMqNbBKrloxNvOg
+GEMINI_API_KEY=paste_the_Gemini_api_key
 
 📦 2. Installing Dependencies
 The application is split into two distinct directories. You must install the dependencies for both.
