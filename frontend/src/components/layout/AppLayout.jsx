@@ -45,7 +45,7 @@ const AppLayout = () => {
       {/* Sidebar */}
       <aside className="w-64 bg-white dark:bg-slate-900 border-r border-gray-200 dark:border-slate-800 flex flex-col transition-colors duration-200">
         <div className="h-16 flex items-center px-6 border-b border-gray-200 dark:border-slate-800 transition-colors duration-200">
-          <h1 className="text-xl font-bold text-blue-600 dark:text-blue-500">WeeklyStatus</h1>
+          <h1 className="text-xl font-bold text-blue-600 dark:text-blue-500">ThirdEye System</h1>
         </div>
         
         <nav className="flex-1 overflow-y-auto py-4">
