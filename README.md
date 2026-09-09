@@ -16,11 +16,10 @@ Backend (/backend/.env)
 Create a .env file in the backend directory and add the following keys:
 
 Code snippet
-
 PORT=5000
-MONGO_URI=paste_the_mongo_uri
-JWT_SECRET=your_super_secret_key_here
-GEMINI_API_KEY=paste_the_Gemini_api_key
+MONGO_URI=your_mongodb_connection_string_here
+JWT_SECRET=your_secure_jwt_secret_key
+GEMINI_API_KEY=your_google_gemini_api_key
 
 📦 2. Installing Dependencies
 The application is split into two distinct directories. You must install the dependencies for both.
@@ -55,7 +54,6 @@ In the backend terminal, run:
 
 Bash
 npm run dev
-
 (You should see: Server running in development mode on port 5000 and MongoDB Connected)
 
 Start the Frontend Server:
@@ -63,10 +61,9 @@ In the frontend terminal, run:
 
 Bash
 npm run dev
-
 (Navigate to the local URL provided in the console, usually http://localhost:5173 or http://localhost:3000)
 
-🧪 5. Evaluation Guide (RBAC)
+🧪 5. Supervisor Evaluation Guide (RBAC)
 The system utilizes strict Role-Based Access Control (RBAC). Please use the following seeded credentials to evaluate the system from different user perspectives.
 
 Admin View
