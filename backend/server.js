@@ -7,8 +7,10 @@ const cors = require('cors');
 require('dotenv').config();
 const connectDB = require('./config/db');
 
-// Connect to the database
-connectDB();
+// Connect to the database ONLY if not in the test environment
+if (process.env.NODE_ENV !== 'test') {
+  connectDB();
+}
 
 // Initialize Express
 const app = express();
@@ -28,12 +30,17 @@ app.use('/api/projects', projectRoutes);
 app.use('/api/ai', aiRoutes);
 app.use('/api/users', userRoutes);
 
-
 app.get('/', (req, res) => {
   res.send('Weekly Report API is running...');
 });
 
-const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-});
+// Only listen if the file is run directly (not imported by Jest)
+if (process.env.NODE_ENV !== 'test') {
+  const PORT = process.env.PORT || 5000;
+  app.listen(PORT, () => {
+    console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
+  });
+}
+
+// Export the app so Supertest can use it!
+module.exports = app;
