@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, ShieldAlert, UserPlus, Trash2, X, Mail, Lock, User, ChevronLeft, ChevronRight, Users } from 'lucide-react';
+import { Shield, ShieldAlert, UserPlus, Trash2, X, Mail, Lock, User, ChevronLeft, ChevronRight, Users, Pencil } from 'lucide-react';
 import api from '../api/axiosConfig';
 import Swal from 'sweetalert2';
 
@@ -15,6 +15,7 @@ const UserManagementPage = () => {
   // Form State
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editingUserId, setEditingUserId] = useState(null); // Tracks if we are editing
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -31,7 +32,6 @@ const UserManagementPage = () => {
 
   const fetchUsers = async () => {
     try {
-      // Assuming your backend has an endpoint to get all users
       const res = await api.get('/users'); 
       setUsers(res.data);
     } catch (err) {
@@ -53,34 +53,58 @@ const UserManagementPage = () => {
 
   const closeForm = () => {
     setIsFormOpen(false);
+    setEditingUserId(null); // Reset edit state
     setFormData({ name: '', email: '', password: '', role: 'team_member' });
   };
 
+  const openEditForm = (user) => {
+    setEditingUserId(user._id);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      password: '', // Leave blank so backend knows not to change it unless typed
+      role: user.role
+    });
+    setIsFormOpen(true);
+  };
+
   // --- Handlers ---
-  const handleCreateUser = async (e) => {
+  const handleSubmitUser = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
 
     try {
-      // Assuming your backend has a registration/creation endpoint
-      await api.post('/users/register', formData);
+      if (editingUserId) {
+        // Edit Mode
+        await api.put(`/users/${editingUserId}`, formData);
+        Swal.fire({
+          icon: 'success',
+          title: 'User Updated',
+          text: `${formData.name}'s details have been saved.`,
+          timer: 1500,
+          showConfirmButton: false,
+          ...getSwalTheme()
+        });
+      } else {
+        // Create Mode
+        await api.post('/users/register', formData);
+        Swal.fire({
+          icon: 'success',
+          title: 'User Created',
+          text: `${formData.name} has been added to the system.`,
+          timer: 1500,
+          showConfirmButton: false,
+          ...getSwalTheme()
+        });
+      }
       
       await fetchUsers();
       closeForm();
-      
-      Swal.fire({
-        icon: 'success',
-        title: 'User Created',
-        text: `${formData.name} has been added to the system.`,
-        timer: 1500,
-        showConfirmButton: false,
-        ...getSwalTheme()
-      });
     } catch (err) {
       Swal.fire({
         icon: 'error',
-        title: 'Creation Failed',
-        text: err.response?.data?.message || 'Failed to create user.',
+        title: editingUserId ? 'Update Failed' : 'Creation Failed',
+        text: err.response?.data?.message || 'Failed to process request.',
         ...getSwalTheme()
       });
     } finally {
@@ -90,12 +114,8 @@ const UserManagementPage = () => {
 
   const handleRoleChange = async (userId, newRole) => {
     try {
-      // Assuming a PUT route to update user role
       await api.put(`/users/${userId}/role`, { role: newRole });
-      
-      // Update local state instantly for snappy UI
       setUsers(users.map(u => u._id === userId ? { ...u, role: newRole } : u));
-      
       Swal.fire({
         icon: 'success',
         title: 'Role Updated',
@@ -192,7 +212,7 @@ const UserManagementPage = () => {
           <p className="text-sm text-gray-500 dark:text-slate-400 mt-1">Invite team members, assign roles, and manage access.</p>
         </div>
         <button 
-          onClick={() => setIsFormOpen(true)} 
+          onClick={() => { setEditingUserId(null); setIsFormOpen(true); }} 
           className="flex items-center bg-blue-600 text-white px-5 py-2.5 rounded-lg hover:bg-blue-700 transition-all shadow-sm text-sm font-medium w-full sm:w-auto justify-center"
         >
           <UserPlus className="w-4 h-4 mr-2" /> Invite User
@@ -234,7 +254,6 @@ const UserManagementPage = () => {
                         {getRoleIcon(u.role)}
                         <span className="ml-1.5 capitalize">{u.role.replace('_', ' ')}</span>
                       </div>
-                      {/* Instant Role Swap Dropdown */}
                       <select 
                         className="text-xs bg-transparent text-gray-400 hover:text-gray-900 dark:hover:text-slate-200 outline-none cursor-pointer border-none focus:ring-0 opacity-0 group-hover:opacity-100 transition-opacity"
                         value={u.role}
@@ -248,6 +267,15 @@ const UserManagementPage = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    {/* Edit Button */}
+                    <button 
+                      onClick={() => openEditForm(u)} 
+                      className="p-1.5 text-gray-400 hover:text-blue-600 dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors mr-2"
+                      title="Edit User"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    {/* Delete Button */}
                     <button 
                       onClick={() => handleDeleteUser(u._id, u.name)} 
                       className="p-1.5 text-gray-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors"
@@ -262,7 +290,7 @@ const UserManagementPage = () => {
           </table>
         </div>
 
-        {/* Pagination Controls */}
+        {/* Pagination */}
         {totalPages > 1 && (
           <div className="px-6 py-4 border-t border-gray-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between">
             <span className="text-sm text-gray-600 dark:text-slate-400">
@@ -288,7 +316,7 @@ const UserManagementPage = () => {
         )}
       </div>
 
-      {/* Create User Form Overlay with Backdrop Blur */}
+      {/* Dynamic Form Overlay */}
       {isFormOpen && (
         <div className="fixed inset-0 bg-slate-900/50 dark:bg-slate-950/80 backdrop-blur-sm flex items-center justify-center z-50 p-4 transition-all duration-200">
           <div className="bg-white dark:bg-slate-900 rounded-xl shadow-2xl w-full max-w-md p-6 sm:p-8 relative border border-gray-200 dark:border-slate-800">
@@ -300,10 +328,14 @@ const UserManagementPage = () => {
             </button>
             
             <h2 className="text-xl font-bold mb-6 text-gray-900 dark:text-white flex items-center">
-              <UserPlus className="w-5 h-5 mr-2 text-blue-500" /> Invite New User
+              {editingUserId ? (
+                <><Pencil className="w-5 h-5 mr-2 text-blue-500" /> Edit User</>
+              ) : (
+                <><UserPlus className="w-5 h-5 mr-2 text-blue-500" /> Invite New User</>
+              )}
             </h2>
             
-            <form onSubmit={handleCreateUser} className="space-y-4">
+            <form onSubmit={handleSubmitUser} className="space-y-4">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">Full Name</label>
                 <div className="relative group">
@@ -327,13 +359,21 @@ const UserManagementPage = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">Temporary Password</label>
+                <label className="block text-sm font-semibold text-gray-700 dark:text-slate-300 mb-1.5">
+                  {editingUserId ? 'New Password (leave blank to keep current)' : 'Temporary Password'}
+                </label>
                 <div className="relative group">
                   <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                     <Lock className="h-4 w-4 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                   </div>
-                  <input type="password" required className={inputBaseClasses} placeholder="••••••••"
-                    value={formData.password} onChange={(e) => setFormData({...formData, password: e.target.value})} />
+                  <input 
+                    type="password" 
+                    required={!editingUserId} // Only required when creating a new user
+                    className={inputBaseClasses} 
+                    placeholder="••••••••"
+                    value={formData.password} 
+                    onChange={(e) => setFormData({...formData, password: e.target.value})} 
+                  />
                 </div>
               </div>
 
@@ -357,7 +397,7 @@ const UserManagementPage = () => {
                   Cancel
                 </button>
                 <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 transition-colors shadow-sm flex items-center">
-                  {isSubmitting ? 'Creating...' : 'Create User'}
+                  {isSubmitting ? 'Saving...' : (editingUserId ? 'Save Changes' : 'Create User')}
                 </button>
               </div>
             </form>

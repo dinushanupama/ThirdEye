@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getUsers, createUser, updateUserRole, deleteUser } = require('../controllers/userController');
+const { getUsers, createUser, updateUserRole, deleteUser, updateUser } = require('../controllers/userController');
 
 // Import your existing auth middleware
 const { protect } = require('../middleware/authMiddleware'); 
@@ -25,6 +25,9 @@ router.route('/:id/role')
   .put(protect, admin, updateUserRole);
 
 router.route('/:id')
-  .delete(protect, admin, deleteUser);
+  .delete(protect, admin, deleteUser)
+  .put(protect, admin, updateUser);
+
+ 
 
 module.exports = router;
