@@ -63,7 +63,7 @@ Bash
 npm run dev
 (Navigate to the local URL provided in the console, usually http://localhost:5173 or http://localhost:3000)
 
-🧪 5. Supervisor Evaluation Guide (RBAC)
+🧪 5. Evaluation Guide (RBAC)
 The system utilizes strict Role-Based Access Control (RBAC). Please use the following seeded credentials to evaluate the system from different user perspectives.
 
 Admin View
