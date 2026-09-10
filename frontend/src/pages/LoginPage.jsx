@@ -2,7 +2,8 @@ import { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import { Lock, Mail, LayoutDashboard } from 'lucide-react';
-import Swal from 'sweetalert2'; // <-- Imported SweetAlert2
+import Swal from 'sweetalert2'; 
+import Logo from '../assets/logo.svg';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
@@ -67,7 +68,7 @@ const LoginPage = () => {
         {/* Brand/Logo Area */}
         <div className="flex justify-center mb-6">
           <div className="h-12 w-12 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center border border-blue-200 dark:border-blue-800/50 shadow-sm">
-            <LayoutDashboard className="h-6 w-6 text-blue-600 dark:text-blue-400" />
+            <img src={Logo} alt="WeeklyStatus Logo" className="h-7 w-7 object-contain" />
           </div>
         </div>
 
