@@ -125,12 +125,11 @@ const reviewReport = async (req, res) => {
       return res.status(400).json({ message: 'Can only review Submitted reports' });
     }
 
-    // FIX: Ensure currentVersion has a valid numerical baseline before any math
     if (!report.currentVersion) {
       report.currentVersion = 1;
     }
 
-    // Save a snapshot of the report content if changes are requested (Bonus Requirement)
+    // Save a snapshot of the report content if changes are requested
     if (action === 'Needs Correction') {
       await ReportVersion.create({
         reportId: report._id,
@@ -141,12 +140,13 @@ const reviewReport = async (req, res) => {
         achievements: report.achievements,
         hoursBreakdown: report.hoursBreakdown,
         notes: report.notes,
-        managerComment: comment
+        latestReviewComment: comment
       });
-      report.currentVersion += 1; // Now this will safely equal 2
+      // REMOVED: report.currentVersion += 1; 
+      // The version will now only increment when the user resubmits via updateReport
     }
 
-    // Update report status
+    // Update report status and save the manager's comment
     report.status = action;
     report.latestReviewComment = comment || '';
     await report.save();
@@ -157,8 +157,7 @@ const reviewReport = async (req, res) => {
       reviewer: req.user._id,
       action,
       comment,
-      // Safely calculate the logged version number based on the action taken
-      versionNumber: report.currentVersion - (action === 'Needs Correction' ? 1 : 0)
+      versionNumber: report.currentVersion 
     });
 
     res.json(report);

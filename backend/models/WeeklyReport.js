@@ -45,7 +45,8 @@ const weeklyReportSchema = new mongoose.Schema({
     meetings: { type: Number, default: 0 },
     documentation: { type: Number, default: 0 }
   }, //[cite: 1]
-  notes: { type: String, default: '' }
+  notes: { type: String, default: '' },
+  latestReviewComment: { type: String, default: '' }
 }, { timestamps: true });
 
 module.exports = mongoose.model('WeeklyReport', weeklyReportSchema);

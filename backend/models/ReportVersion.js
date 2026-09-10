@@ -23,7 +23,7 @@ const reportVersionSchema = new mongoose.Schema({
   achievements: Array,
   hoursBreakdown: Object,
   notes: String,
-  managerComment: String 
+  latestReviewComment: String 
 }, { timestamps: true });
 
 module.exports = mongoose.model('ReportVersion', reportVersionSchema);
