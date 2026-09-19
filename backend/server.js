@@ -16,7 +16,11 @@ if (process.env.NODE_ENV !== 'test') {
 const app = express();
 
 // Middleware
-app.use(cors());
+// app.use(cors());
+app.use(cors({
+  origin: 'https://third-eye-bice.vercel.app', 
+  credentials: true
+}));
 app.use(express.json());
 
 const authRoutes = require('./routes/authRoutes');
