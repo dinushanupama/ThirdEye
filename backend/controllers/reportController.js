@@ -1,6 +1,7 @@
 const WeeklyReport = require('../models/WeeklyReport');
 const ReviewLog = require('../models/ReviewLog');
 const ReportVersion = require('../models/ReportVersion');
+const sendEmail = require('../utils/sendEmail');
 
 // @desc    Create a new weekly report
 // @route   POST /api/reports
@@ -109,13 +110,74 @@ const updateReport = async (req, res) => {
   }
 };
 
+// // @desc    Manager review action (Approve or Request Changes)
+// // @route   POST /api/reports/:id/review
+// // @access  Private (Manager/Admin)
+// const reviewReport = async (req, res) => {
+//   try {
+//     const { action, comment } = req.body; 
+//     const report = await WeeklyReport.findById(req.params.id);
+
+//     if (!report) {
+//       return res.status(404).json({ message: 'Report not found' });
+//     }
+
+//     if (report.status !== 'Submitted') {
+//       return res.status(400).json({ message: 'Can only review Submitted reports' });
+//     }
+
+//     if (!report.currentVersion) {
+//       report.currentVersion = 1;
+//     }
+
+//     // Save a snapshot of the report content if changes are requested
+//     if (action === 'Needs Correction') {
+//       await ReportVersion.create({
+//         reportId: report._id,
+//         versionNumber: report.currentVersion,
+//         tasks: report.tasks,
+//         plannedNextWeek: report.plannedNextWeek,
+//         blockers: report.blockers,
+//         achievements: report.achievements,
+//         hoursBreakdown: report.hoursBreakdown,
+//         notes: report.notes,
+//         latestReviewComment: comment
+//       });
+//       // REMOVED: report.currentVersion += 1; 
+//       // The version will now only increment when the user resubmits via updateReport
+//     }
+
+//     // Update report status and save the manager's comment
+//     report.status = action;
+//     report.latestReviewComment = comment || '';
+//     await report.save();
+
+//     // Log the review action
+//     await ReviewLog.create({
+//       report: report._id,
+//       reviewer: req.user._id,
+//       action,
+//       comment,
+//       versionNumber: report.currentVersion 
+//     });
+
+//     res.json(report);
+//   } catch (error) {
+//     res.status(500).json({ message: error.message });
+//   }
+// };
+
 // @desc    Manager review action (Approve or Request Changes)
 // @route   POST /api/reports/:id/review
 // @access  Private (Manager/Admin)
 const reviewReport = async (req, res) => {
   try {
-    const { action, comment } = req.body; 
-    const report = await WeeklyReport.findById(req.params.id);
+    const { action, comment } = req.body;
+    
+    // 2. Populate user to get name and email, and project for report context
+    const report = await WeeklyReport.findById(req.params.id)
+      .populate('user', 'name email')
+      .populate('project', 'name');
 
     if (!report) {
       return res.status(404).json({ message: 'Report not found' });
@@ -129,7 +191,7 @@ const reviewReport = async (req, res) => {
       report.currentVersion = 1;
     }
 
-    // Save a snapshot of the report content if changes are requested
+    // Save snapshot of the report before modification
     if (action === 'Needs Correction') {
       await ReportVersion.create({
         reportId: report._id,
@@ -142,11 +204,9 @@ const reviewReport = async (req, res) => {
         notes: report.notes,
         latestReviewComment: comment
       });
-      // REMOVED: report.currentVersion += 1; 
-      // The version will now only increment when the user resubmits via updateReport
     }
 
-    // Update report status and save the manager's comment
+    // Update report status and review comment
     report.status = action;
     report.latestReviewComment = comment || '';
     await report.save();
@@ -157,8 +217,40 @@ const reviewReport = async (req, res) => {
       reviewer: req.user._id,
       action,
       comment,
-      versionNumber: report.currentVersion 
+      versionNumber: report.currentVersion
     });
+
+    // 3. Trigger email if action is 'Needs Correction'
+    if (action === 'Needs Correction' && report.user?.email) {
+      const projectName = report.project?.name || 'Assigned Project';
+      const recipientName = report.user.name || 'Team Member';
+
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; rounded-lg: 8px;">
+          <h2 style="color: #d97706; margin-top: 0;">Weekly Report - Corrections Requested</h2>
+          <p>Hi <strong>${recipientName}</strong>,</p>
+          <p>Your weekly report for <strong>${projectName}</strong> has been reviewed by your manager and marked as <strong>Needs Correction</strong>.</p>
+          
+          <div style="background-color: #fffbeb; border-left: 4px solid #f59e0b; padding: 12px 16px; margin: 20px 0; border-radius: 4px;">
+            <p style="margin: 0; font-weight: bold; color: #92400e;">Manager Feedback:</p>
+            <p style="margin: 6px 0 0 0; color: #78350f; font-style: italic;">"${comment || 'Please update your report details and resubmit.'}"</p>
+          </div>
+
+          <p>Please log in to your dashboard to make the requested revisions and submit your updated report.</p>
+          
+          <div style="margin-top: 30px; padding-top: 15px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b;">
+            This is an automated notification from WeeklyStatus. Please do not reply directly to this email.
+          </div>
+        </div>
+      `;
+
+      // Non-blocking call so email latency doesn't delay the API response
+      sendEmail({
+        to: report.user.email,
+        subject: `Action Required: Changes Requested for ${projectName} Report`,
+        html: emailHtml
+      });
+    }
 
     res.json(report);
   } catch (error) {
